@@ -1,0 +1,44 @@
+name: Release
+
+# Tag a version to cut a release:  git tag v0.2.0 && git push origin v0.2.0
+# The tag drives the release; this job guards that the tag matches pyproject's
+# version and that tests pass before publishing.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # gh release create needs write access to the repo's releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Guard tag == pyproject version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(uv version --short 2>/dev/null || grep -m1 '^version' pyproject.toml | sed -E 's/.*"(.*)".*/\1/')"
+          echo "tag=$tag  pyproject=$pkg"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag v$tag does not match pyproject version $pkg — bump pyproject and re-tag."
+            exit 1
+          fi
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Run tests
+        run: uv run pytest -q
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"

@@ -54,6 +54,7 @@ itw "paul mccartney" --detail   # + headline snippet, scores, tiers, evidence
 itw messi v ronaldo             # head-to-head, winner on the left
 itw top                         # the top 20 as a pixel-avatar gallery
 itw board                       # leaderboard table (optional slice, default: top)
+itw update                      # check for a newer release & upgrade in place
 ```
 
 | Command | What it does |
@@ -63,10 +64,11 @@ itw board                       # leaderboard table (optional slice, default: to
 | `itw <a> v <b>` | Head-to-head — two people side by side, winner on the left 👑 |
 | `itw top` | The top 20 names as a pixel-avatar gallery (adapts to your width) |
 | `itw board [slice]` | Leaderboard table (default slice: `top`) |
+| `itw update` | Check the latest release and upgrade (`--check` to only report) |
 
 Quotes are optional — `itw paul mccartney` works too.
 
-**Flags:** `--detail`, `--version`, `-h`/`--help`.
+**Flags:** `--detail`, `--check`, `--version`, `-h`/`--help`.
 
 ## Head-to-head
 
@@ -79,6 +81,19 @@ Renders two people side by side. The **higher-strength one is the winner and goe
 the left**, marked with a 👑; the other is on the right. Separate the two names with a
 standalone `v`, `vs`, or `versus`. If a name has never been searched on the site it
 shows the silhouette and a "not found" note (and loses).
+
+## Staying up to date
+
+```bash
+itw update          # compares your build to the latest GitHub release, then upgrades
+itw update --check  # just report whether a newer release exists — never installs
+```
+
+`itw update` reads the repo's latest [GitHub release](https://github.com/mattsilv/itw-cli/releases)
+and compares it to your installed version. If a newer one exists it shows the release
+notes link and offers to run the upgrade in place (it picks up `uv` or `pipx`
+automatically — whichever you installed with). Releases are versioned `vX.Y.Z`; your
+current version is `itw --version`.
 
 ## Generate your own avatars (optional, needs a key)
 

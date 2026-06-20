@@ -9,4 +9,11 @@ Layout:
   cli.py       argument dispatch / entrypoint
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import version, PackageNotFoundError
+
+# Single runtime source of truth: the installed package metadata (from pyproject's
+# `version`). Bumping pyproject + tagging vX.Y.Z is the only place a human touches it.
+try:
+    __version__ = version("itw-cli")
+except PackageNotFoundError:  # running from source / PEP-723 zero-install, not installed
+    __version__ = "0.0.0+local"
