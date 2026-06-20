@@ -24,6 +24,22 @@ That's it. The `release.yml` workflow fires on the `v*` tag and:
 
 Users pick it up with `itw update`.
 
+> **Do not run `gh release create` manually.** The workflow owns releases. Creating one
+> by hand races the workflow and makes it fail with `422 Release.tag_name already exists`
+> (this broke the v0.3.2 / v0.3.3 release runs). Just push the tag.
+
+### Local guard (recommended)
+
+Enable the pre-push hook once per clone so a drifted or already-released tag is caught
+before it reaches CI:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It checks `tag == pyproject version` and refuses to push a `vX.Y.Z` tag whose GitHub
+Release already exists.
+
 ## Versioning
 
 Semver-ish: bump **patch** for fixes, **minor** for new commands/features, **major** for
