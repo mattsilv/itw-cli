@@ -179,7 +179,7 @@ def _card_renderable(data: dict, name: str, cols: int):
             conf = 0
         grid.add_row(
             Text(_short_model_label(m.get("label", mid)).upper(), style=fg),
-            _model_bar(fill_pct, conf, cardlib.brand_color(mid), width=18),
+            _model_bar(fill_pct, conf, cardlib.brand_color(mid), width=10),
         )
 
     # avatar on top (full detail), then centered header, then the bars block.
@@ -199,7 +199,8 @@ def _card_renderable(data: dict, name: str, cols: int):
     # clickable footer: OSC 8 hyperlink to THIS person's profile page on the site
     # (opens in the default browser on Ghostty / iTerm2 / kitty / WezTerm)
     profile_url = f"{BASE}/p/{slugify(name)}"
-    blocks.append(Align.right(Text("intheweights.com", style=f"dim underline {fg} link {profile_url}")))
+    permalink = profile_url.replace("https://", "").replace("http://", "")
+    blocks.append(Align.right(Text(permalink, style=f"dim underline {fg} link {profile_url}")))
 
     return Panel(
         Group(*blocks), box=box.ROUNDED, border_style=fg,
@@ -278,7 +279,10 @@ def cmd_lookup(name: str, cols: int = 64, detail: bool = False):
 # --------------------------------------------------------------------------
 # top — tiled gallery of our pixel avatars for the leaderboard's top names
 # --------------------------------------------------------------------------
-def _gallery_tile(name: str, rank, cols: int = 18):
+_TILE_COLS = 16  # avatar width per gallery tile
+
+
+def _gallery_tile(name: str, rank, cols: int = _TILE_COLS):
     """One gallery cell: our bundled avatar (or a red ✕ placeholder) above a short
     name + rank."""
     img = local_avatar(_avatar_slug(name))
@@ -295,12 +299,21 @@ def _gallery_tile(name: str, rank, cols: int = 18):
     return Group(art, label)
 
 
-def cmd_top(per_row: int = 4):
-    """Render the leaderboard's top names as a tiled pixel-avatar gallery."""
+def cmd_top(per_row: int = 0):
+    """Render the leaderboard's top names as a tiled pixel-avatar gallery.
+
+    `per_row` defaults to as many tiles as fit the current terminal width so the
+    panel never exceeds the terminal (overflow would wrap into a broken left edge)."""
     rows = get("/api/leaderboard?slice=top")
     if not rows:
         console.print("[yellow]leaderboard unavailable[/]")
         return
+
+    if per_row <= 0:
+        # each cell ≈ tile width + grid padding (2 each side); leave room for the
+        # panel border + padding. Clamp to a sane 2..5 range.
+        avail = console.width - 8
+        per_row = max(2, min(5, avail // (_TILE_COLS + 4)))
 
     grid = Table.grid(padding=(1, 2))
     for _ in range(per_row):

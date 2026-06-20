@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -11,9 +12,17 @@ from rich.console import Console
 BASE = "https://intheweights.com"
 USER_AGENT = "itw-cli"
 
-# honor COLUMNS / ITW_WIDTH; sane fallback when piped (Rich would otherwise use 80)
-_W = int(os.environ.get("ITW_WIDTH") or shutil.get_terminal_size((110, 40)).columns)
-console = Console(width=max(_W, 90))
+# Width: explicit ITW_WIDTH wins; on a real terminal use its ACTUAL width (never force
+# a floor — that overflows narrow terminals and wraps panels into a broken left edge);
+# when piped/redirected use a roomy default so wide tables/galleries stay readable.
+_env_w = os.environ.get("ITW_WIDTH")
+if _env_w:
+    _W = int(_env_w)
+elif sys.stdout.isatty():
+    _W = shutil.get_terminal_size((110, 40)).columns
+else:
+    _W = 110
+console = Console(width=_W)
 
 # category -> color
 CAT_COLOR = {
