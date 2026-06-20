@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Guard release tags before they reach GitHub.
+#
+# When pushing a version tag (vX.Y.Z) this verifies it matches pyproject.toml's
+# version — the same check the Release workflow enforces, but failing locally so a
+# drifted tag never triggers a red CI run. It also blocks pushing a tag whose
+# GitHub Release already exists, the failure that bit v0.3.2/v0.3.3 when a release
+# was created manually instead of letting the workflow own it (see docs/RELEASING.md).
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+pyproj_version() {
+  grep -m1 '^version' "$repo_root/pyproject.toml" | sed -E 's/.*"(.*)".*/\1/'
+}
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref _ _ _; do
+  case "$local_ref" in
+    refs/tags/v*)
+      tag="${local_ref#refs/tags/v}"
+      pkg="$(pyproj_version)"
+      if [ "$tag" != "$pkg" ]; then
+        echo "✗ pre-push: tag v$tag != pyproject version $pkg — bump pyproject.toml and re-tag." >&2
+        exit 1
+      fi
+      if command -v gh >/dev/null 2>&1 && gh release view "v$tag" >/dev/null 2>&1; then
+        echo "✗ pre-push: GitHub Release v$tag already exists." >&2
+        echo "  The Release workflow creates releases — do not run 'gh release create' manually." >&2
+        echo "  (see docs/RELEASING.md)" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+exit 0
