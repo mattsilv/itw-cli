@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# venv / uv
+.venv/
+uv.lock
+
+# test / cache
+.pytest_cache/
+.ruff_cache/
+# generated/scratch PNGs are ignored, except our bundled pixel avatars
+*.png
+!itwlib/avatars/
+!itwlib/avatars/*.png
+
+# OS
+.DS_Store
+
+# internal planning / brainstorming / research — never publish
+docs/plans/
+docs/research/
+docs/brainstorms/
+*-plan.md
+*-brainstorm.md
+*-ssot.md
