@@ -303,61 +303,110 @@ def _gallery_tile(name: str, rank, cols: int = _TILE_COLS):
 # versus — head-to-head, winner on the left
 # --------------------------------------------------------------------------
 def _fighter(name: str) -> dict:
-    """Resolve one side of a versus matchup: fetch the result (if any), compute
-    strength, and pick the best available avatar (ours > hosted > silhouette)."""
+    """Resolve one side of a versus matchup: result (if any), strength, per-model
+    cells, and the best avatar (ours > hosted > silhouette). The avatar is looked up
+    by the CANONICAL name so short inputs like 'messi' still find 'lionel-messi'."""
     slug = slugify(name)
     data = get(f"/api/result/{urllib.parse.quote(slug)}")
     found = bool(data)
-    if found:
-        ref = (data.get("referents") or [{}])[0]
-        models = data.get("models") or []
-        cname = ref.get("canonicalName") or name
-        descriptor = ref.get("canonicalDescriptor") or ""
-        strength = cardlib.strength(ref, models)
-    else:
-        cname = name
-        descriptor = ""
-        strength = 0
+    ref = (data.get("referents") or [{}])[0] if found else {}
+    models = (data.get("models") or []) if found else []
+    cname = ref.get("canonicalName") or name
+    descriptor = ref.get("canonicalDescriptor") or ""
+    strength = cardlib.strength(ref, models) if found else 0
+    cells = ref.get("cells") or {}
 
-    img = local_avatar(_avatar_slug(name))
+    # avatar by canonical slug first (matches bundled filenames), then the raw input,
+    # then the hosted image, then the generic silhouette
+    img = local_avatar(_avatar_slug(cname)) or local_avatar(_avatar_slug(name))
     if img is None:
-        av = avatar_url(slug)
+        av = avatar_url(_avatar_slug(cname))
         if avatar_exists(av):
-            img = fetch_bytes(av, slug=slug)
+            img = fetch_bytes(av, slug=_avatar_slug(cname))
     if img is None:
         img = local_avatar("_placeholder")
 
-    return {"name": cname, "descriptor": descriptor, "strength": strength,
-            "img": img, "found": found}
+    return {"name": cname, "descriptor": descriptor, "strength": strength, "img": img,
+            "found": found, "cells": cells, "models": models}
 
 
 def _fighter_cell(f: dict, winner: bool):
-    """One fighter column for the versus panel: crown/dash, avatar, name, strength."""
+    """One fighter column for the versus panel: crown, avatar, name, strength."""
     fg, accent = cardlib.FG, cardlib.ACCENT
-    blocks: list = []
-    if winner:
-        blocks.append(Text("👑 WINNER", style=f"bold {accent}"))
-    else:
-        blocks.append(Text("—", style="dim"))
-
+    blocks: list = [Text("👑 WINNER" if winner else "runner-up",
+                         style=(f"bold {accent}" if winner else "dim"))]
     if f["img"]:
         try:
-            blocks.append(render_avatar(f["img"], cols=26))
+            blocks.append(render_avatar(f["img"], cols=22))
         except Exception:  # noqa: BLE001
             pass
-
     blocks.append(Text(f["name"].upper(), style=f"bold {fg}"))
     if f["descriptor"]:
-        blocks.append(Text(f["descriptor"], style=f"dim {fg}"))
+        # clip to one line so both fighters' STRENGTH rows stay aligned
+        d = f["descriptor"]
+        d = (d[:21] + "…") if len(d) > 22 else d
+        blocks.append(Text(d, style=f"dim {fg}", no_wrap=True))
     blocks.append(Text(f"{f['strength']} STRENGTH", style=f"bold {accent}"))
     if not f["found"]:
         blocks.append(Text("not found", style="dim"))
     return Align.center(Group(*blocks))
 
 
+def _versus_scoreboard(left: dict, right: dict):
+    """Per-model breakdown: for each model, which fighter it recognized more, plus a
+    tally — so both parties see who they won (and which models had their back)."""
+    fg, accent = cardlib.FG, cardlib.ACCENT
+    models = left["models"] or right["models"]
+    lcells, rcells = left["cells"], right["cells"]
+
+    def _score(cells, mid):
+        try:
+            return int(round(float((cells.get(mid) or {}).get("recognitionScore", 0) or 0)))
+        except (TypeError, ValueError):
+            return 0
+
+    rows = Table.grid(padding=(0, 1))
+    rows.add_column(justify="right", width=3)
+    rows.add_column(justify="center", no_wrap=True)
+    rows.add_column(justify="left", width=3)
+    lwins = rwins = ties = 0
+    for m in models:
+        mid = m.get("id")
+        ls, rs = _score(lcells, mid), _score(rcells, mid)
+        if ls > rs:
+            lwins += 1
+            ls_st, rs_st = "bold bright_green", "dim"
+        elif rs > ls:
+            rwins += 1
+            ls_st, rs_st = "dim", "bold bright_green"
+        else:
+            ties += 1
+            ls_st = rs_st = "dim"
+        rows.add_row(
+            Text(str(ls), style=ls_st),
+            Text(_short_model_label(m.get("label", mid)).upper(), style=f"dim {fg}"),
+            Text(str(rs), style=rs_st),
+        )
+
+    tally = Text(justify="center")
+    tally.append(f"{_short_name(left['name']).upper()} takes {lwins}", style=f"bold {accent}")
+    tally.append("   ·   ", style="dim")
+    tally.append(f"{_short_name(right['name']).upper()} takes {rwins}", style=f"bold {fg}")
+    if ties:
+        tally.append(f"   ·   {ties} tied", style="dim")
+
+    return Group(
+        Align.center(Text("— how each model scored —", style=f"dim {fg}")),
+        Text(""),
+        Align.center(rows),
+        Text(""),
+        tally,
+    )
+
+
 def cmd_versus(name_a: str, name_b: str):
-    """Head-to-head: render two people side by side, the higher-strength one on the
-    LEFT with a crown. A TIE keeps A on the left."""
+    """Head-to-head: two people side by side, the higher-strength one on the LEFT with
+    a crown, plus a per-model scoreboard. A TIE keeps A on the left."""
     a = _fighter(name_a)
     b = _fighter(name_b)
 
@@ -365,24 +414,18 @@ def cmd_versus(name_a: str, name_b: str):
         console.print("[yellow]neither name has been searched on the site yet[/]")
         return
 
-    # winner on the left; tie keeps A on the left
     left, right = (a, b) if a["strength"] >= b["strength"] else (b, a)
 
     vs = Text("\n\n\nVS", style="bold dim", justify="center")
+    top = Table.grid(padding=(0, 2))
+    for _ in range(3):
+        top.add_column(justify="center")
+    top.add_row(_fighter_cell(left, winner=True), vs, _fighter_cell(right, winner=False))
 
-    grid = Table.grid(padding=(0, 2))
-    grid.add_column(justify="center")
-    grid.add_column(justify="center")
-    grid.add_column(justify="center")
-    grid.add_row(
-        _fighter_cell(left, winner=True),
-        Align.center(vs),
-        _fighter_cell(right, winner=False),
-    )
-
+    body = Group(top, Text(""), _versus_scoreboard(left, right))
     console.print(Panel(
-        grid, box=box.ROUNDED, border_style=cardlib.ACCENT,
-        style=f"on {cardlib.BG}", padding=(1, 3),
+        body, box=box.ROUNDED, border_style=cardlib.ACCENT,
+        style=f"on {cardlib.BG}", padding=(1, 3), width=min(console.width, 68),
     ))
 
 
