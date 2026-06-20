@@ -68,8 +68,35 @@ Quotes are optional — `itw paul mccartney` works too.
 
 **Flags:** `--detail`, `--version`, `-h`/`--help`.
 
-Only the most popular ~20 names have a hosted avatar; for everyone else the card
-renders fully and shows the stats without an image.
+## Head-to-head
+
+```bash
+itw messi v ronaldo
+itw "sam altman" v "hans moleman"
+```
+
+Renders two people side by side. The **higher-strength one is the winner and goes on
+the left**, marked with a 👑; the other is on the right. Separate the two names with a
+standalone `v`, `vs`, or `versus`. If a name has never been searched on the site it
+shows the silhouette and a "not found" note (and loses).
+
+## Generate your own avatars (optional, needs a key)
+
+`itw` ships ~20 pixel avatars, but you can generate one for **any** name yourself. This
+is the only command that needs an API key and costs money — about **$0.04 per image**
+(an image model + a deterministic quantize). Everything else is free and key-less.
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...        # get one at https://openrouter.ai/keys
+itw generate "tiger woods"                 # ~$0.04, saved locally
+itw "tiger woods"                          # now renders YOUR avatar
+```
+
+Generated avatars are stored under `~/.cache/itw/generated/` (honors `XDG_CACHE_HOME` /
+`ITW_CACHE_DIR`) and **take priority** over both the bundled set and the site's hosted
+image — so generating a name overrides whatever shipped. It uses
+`google/gemini-2.5-flash-image` with the locked `NEAREST` + `FASTOCTREE` pixel-art
+recipe. Your key is read from the environment only and never stored.
 
 ## Rendering
 

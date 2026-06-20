@@ -21,7 +21,8 @@ USAGE = Panel(
     "[cyan]itw [bold]\"<name>\"[/bold] --detail[/]   per-model evidence & tiers\n"
     "[cyan]itw [bold]<a> v <b>[/bold][/]        head-to-head (winner left)\n"
     "[cyan]itw top[/]                  the top 20 as a pixel-avatar gallery\n"
-    "[cyan]itw board[/] [dim][slice][/]        leaderboard table\n\n"
+    "[cyan]itw board[/] [dim][slice][/]        leaderboard table\n"
+    "[cyan]itw generate [bold]\"<name>\"[/bold][/]  make your own avatar [dim](needs OPENROUTER_API_KEY)[/]\n\n"
     "[dim]flags:[/] [cyan]--detail[/] · [cyan]--version[/] · [cyan]-h/--help[/]\n"
     "[dim]read-only — never writes to the site. unofficial & unaffiliated.[/]",
     title="usage", border_style="bright_magenta")
@@ -52,6 +53,13 @@ def main(argv: list[str] | None = None) -> int:
         commands.cmd_board(args[1] if len(args) > 1 else "top")
         return 0
 
+    if cmd == "generate":
+        rest = args[1:]
+        if not rest:
+            console.print("[red]generate needs a <name>[/]  e.g. [dim]itw generate \"tiger woods\"[/]")
+            return 2
+        return _cmd_generate(" ".join(rest))
+
     # head-to-head: `itw <a> v <b>` — split the name tokens on the first standalone
     # `v`/`vs`/`versus` separator (case-insensitive); winner is rendered on the left.
     seps = {"v", "vs", "versus"}
@@ -70,4 +78,29 @@ def main(argv: list[str] | None = None) -> int:
         console.print(USAGE)
         return 0
     commands.cmd_lookup(name, detail=detail)
+    return 0
+
+
+def _cmd_generate(name: str) -> int:
+    """Generate your own pixel avatar for `name` with your OpenRouter key, then render."""
+    import os
+
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        console.print("[red]OPENROUTER_API_KEY is not set.[/]\n"
+                      "[dim]Get a key at https://openrouter.ai/keys, then:[/] "
+                      "[cyan]export OPENROUTER_API_KEY=sk-or-...[/]")
+        return 2
+
+    from itwlib import generate as gen
+
+    console.print(f"[dim]generating a pixel avatar for[/] [bold]{name}[/] "
+                  f"[dim](image model + quantize, ~$0.04)…[/]")
+    try:
+        path, cost = gen.generate_avatar(name, key)
+    except gen.GenerateError as e:
+        console.print(f"[red]generation failed:[/] {e}")
+        return 1
+    console.print(f"[green]saved →[/] {path}  [dim](${cost:.4f})[/]")
+    console.print(f"[dim]now run[/] [cyan]itw \"{name}\"[/] [dim]to see it.[/]")
     return 0

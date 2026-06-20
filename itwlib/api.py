@@ -11,7 +11,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from itwlib.config import BASE, USER_AGENT, console, AVATAR_FMT, cache_dir
+from itwlib.config import BASE, USER_AGENT, console, AVATAR_FMT, cache_dir, generated_dir
 
 # Pixel avatars we generated ourselves (image model + quantize), bundled with the
 # package so the long tail of names the site doesn't host still gets an avatar —
@@ -63,14 +63,16 @@ def avatar_url(slug: str) -> str:
 
 
 def local_avatar(slug: str) -> bytes | None:
-    """Bytes of our own bundled pixel avatar for `slug`, or None if we don't ship
-    one. Preferred over the hosted avatar so generated art wins where it exists.
-    Trailing dots are stripped so names like "Martin Luther King Jr." resolve."""
-    p = _BUNDLED_AVATARS / f"{slug.rstrip('.')}.png"
-    try:
-        return p.read_bytes()
-    except OSError:
-        return None
+    """Bytes of a local pixel avatar for `slug`, or None. Checks your own
+    `itw generate` output first, then the bundled set — both win over the hosted
+    avatar. Trailing dots are stripped so names like "Martin Luther King Jr." resolve."""
+    name = f"{slug.rstrip('.')}.png"
+    for d in (generated_dir(), _BUNDLED_AVATARS):
+        try:
+            return (d / name).read_bytes()
+        except OSError:
+            continue
+    return None
 
 
 def avatar_exists(url: str) -> bool:

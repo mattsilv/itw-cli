@@ -56,3 +56,9 @@ def cache_dir() -> Path:
         xdg = os.environ.get("XDG_CACHE_HOME")
         base = Path(xdg) if xdg else Path.home() / ".cache"
     return base / "itw" / "avatars"
+
+
+def generated_dir() -> Path:
+    """Where `itw generate` stores avatars you make yourself. The render path prefers
+    these over the bundled set, so generating a name overrides whatever shipped."""
+    return cache_dir().parent / "generated"
