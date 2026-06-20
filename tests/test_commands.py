@@ -138,15 +138,29 @@ def test_lookup_falls_back_to_hosted_when_no_bundled(monkeypatch):
     assert "STRENGTH" in cap.get()  # card still renders, just no image
 
 
-@pytest.mark.parametrize("slug", ["alan-turing", "paul-mccartney", "albert-einstein"])
+@pytest.mark.parametrize("slug", ["alan-turing", "paul-mccartney", "albert-einstein",
+                                  "hans-moleman", "thomas-dimson"])
 def test_bundled_avatars_ship(slug):
-    """Smoke test that our generated avatars are actually bundled + loadable at 256px."""
+    """Smoke test that our generated avatars are actually bundled + loadable at 256px.
+
+    Regression guard: hans-moleman / thomas-dimson are manual ref-image avatars for
+    names the hosted set lacks; if they stop resolving the card silently falls back
+    to the grey hosted silhouette (the bug this locks down)."""
     from itwlib.api import local_avatar
     from PIL import Image
     import io
     data = local_avatar(slug)
     assert data and len(data) > 1000
     assert Image.open(io.BytesIO(data)).size == (256, 256)
+
+
+@pytest.mark.parametrize("name", ["hans moleman", "Hans Moleman", "thomas dimson",
+                                  "Thomas Dimson"])
+def test_manual_avatar_resolves_from_display_name(name):
+    """The card looks avatars up via _avatar_slug(name); these manual ones must
+    resolve from the user-typed name (the path that regressed to a silhouette)."""
+    from itwlib.api import local_avatar
+    assert local_avatar(commands._avatar_slug(name)) is not None
 
 
 def test_hitler_avatar_not_bundled():
