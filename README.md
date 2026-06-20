@@ -1,21 +1,25 @@
 # itw — a terminal client for [intheweights.com](https://intheweights.com)
 
-Show the [intheweights.com](https://intheweights.com) leaderboard, a name's per-model
-recognition breakdown, and a **terminal share card with the hosted pixel avatar
-embedded** — rendered as colored half-block pixel art that looks the same in every
-terminal.
+Show the [intheweights.com](https://intheweights.com) leaderboard, look up how strongly
+AI models recognize a name, and render it as a **terminal profile card with a pixel
+avatar** — drawn as colored half-block pixel art that looks the same in every terminal.
+
+<p align="center">
+  <img src="docs/gallery.png" alt="itw top — the top 20 names as generated pixel avatars" width="520">
+</p>
 
 This is an open-source, **read-only** client. It only reads the public leaderboard,
-cached results, and the hosted avatars — it never writes anything to the site.
+cached results, and avatars — it never writes anything to the site.
 
 ```
-itw "paul mccartney"
+itw "paul mccartney"          # profile card
+itw messi v ronaldo           # head-to-head, winner on the left
+itw top                       # the top-20 pixel-avatar gallery (above)
 ```
 
-> One lookup shows everything: the embedded pixel avatar (the web card has none),
-> the name, descriptor, the `STRENGTH · TOP%` line, and per-model brand-colored
-> confidence bars. Add `--detail` for the headline model snippet, scores, tiers, and
-> evidence.
+> One lookup shows everything: the embedded pixel avatar, the name, descriptor, the
+> `STRENGTH · TOP%` line, and per-model brand-colored confidence bars. Add `--detail`
+> for the headline model snippet, scores, tiers, and evidence.
 
 ## Install
 
@@ -47,6 +51,7 @@ From a local clone, `uv tool install .` / `pipx install .` also work.
 ```bash
 itw "paul mccartney"            # profile card — avatar + strength + model bars
 itw "paul mccartney" --detail   # + headline snippet, scores, tiers, evidence
+itw messi v ronaldo             # head-to-head, winner on the left
 itw top                         # the top 20 as a pixel-avatar gallery
 itw board                       # leaderboard table (optional slice, default: top)
 ```
@@ -55,7 +60,8 @@ itw board                       # leaderboard table (optional slice, default: to
 | --- | --- |
 | `itw "<name>"` | ⭐ Profile card — embedded avatar, strength/top-%, per-model bars |
 | `itw "<name>" --detail` | Adds the per-model snippet, scores, tiers, and evidence |
-| `itw top` | The top 20 names as a 4×5 pixel-avatar gallery |
+| `itw <a> v <b>` | Head-to-head — two people side by side, winner on the left 👑 |
+| `itw top` | The top 20 names as a pixel-avatar gallery (adapts to your width) |
 | `itw board [slice]` | Leaderboard table (default slice: `top`) |
 
 Quotes are optional — `itw paul mccartney` works too.

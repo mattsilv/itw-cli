@@ -13,10 +13,12 @@ uv.lock
 # test / cache
 .pytest_cache/
 .ruff_cache/
-# generated/scratch PNGs are ignored, except our bundled pixel avatars
+# generated/scratch PNGs are ignored, except our bundled pixel avatars + README art
 *.png
 !itwlib/avatars/
 !itwlib/avatars/*.png
+!docs/
+!docs/*.png
 
 # OS
 .DS_Store
