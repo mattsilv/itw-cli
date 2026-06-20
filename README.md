@@ -5,16 +5,16 @@ AI models recognize a name, and render it as a **terminal profile card with a pi
 avatar** — drawn as colored half-block pixel art that looks the same in every terminal.
 
 <p align="center">
-  <img src="docs/gallery.png" alt="itw top — the top 20 names as generated pixel avatars" width="520">
+  <img src="docs/battle.png" alt="itw battle mode — Hans Moleman vs Thomas Dimson, winner on the left" width="520">
 </p>
 
 This is an open-source, **read-only** client. It only reads the public leaderboard,
 cached results, and avatars — it never writes anything to the site.
 
 ```
-itw "paul mccartney"          # profile card
-itw messi v ronaldo           # head-to-head, winner on the left
-itw top                       # the top-20 pixel-avatar gallery (above)
+itw "paul mccartney"               # profile card
+itw hans moleman v thomas dimson   # battle mode — winner on the left (above)
+itw top                            # the top-20 pixel-avatar gallery
 ```
 
 > One lookup shows everything: the embedded pixel avatar, the name, descriptor, the
@@ -49,19 +49,19 @@ From a local clone, `uv tool install .` / `pipx install .` also work.
 ## Usage
 
 ```bash
-itw "paul mccartney"            # profile card — avatar + strength + model bars
-itw "paul mccartney" --detail   # + headline snippet, scores, tiers, evidence
-itw messi v ronaldo             # head-to-head, winner on the left
-itw top                         # the top 20 as a pixel-avatar gallery
-itw board                       # leaderboard table (optional slice, default: top)
-itw update                      # check for a newer release & upgrade in place
+itw "paul mccartney"               # profile card — avatar + strength + model bars
+itw "paul mccartney" --detail      # + headline snippet, scores, tiers, evidence
+itw hans moleman v thomas dimson   # battle mode — winner on the left
+itw top                            # the top 20 as a pixel-avatar gallery
+itw board                          # leaderboard table (optional slice, default: top)
+itw update                         # check for a newer release & upgrade in place
 ```
 
 | Command | What it does |
 | --- | --- |
 | `itw "<name>"` | ⭐ Profile card — embedded avatar, strength/top-%, per-model bars |
 | `itw "<name>" --detail` | Adds the per-model snippet, scores, tiers, and evidence |
-| `itw <a> v <b>` | Head-to-head — two people side by side, winner on the left 👑 |
+| `itw <a> v <b>` | Battle mode — two fighters side by side, winner on the left 👑 |
 | `itw top` | The top 20 names as a pixel-avatar gallery (adapts to your width) |
 | `itw board [slice]` | Leaderboard table (default slice: `top`) |
 | `itw update` | Check the latest release and upgrade (`--check` to only report) |
@@ -70,14 +70,14 @@ Quotes are optional — `itw paul mccartney` works too.
 
 **Flags:** `--detail`, `--check`, `--version`, `-h`/`--help`.
 
-## Head-to-head
+## Battle mode
 
 ```bash
-itw messi v ronaldo
+itw hans moleman v thomas dimson
 itw "sam altman" v "hans moleman"
 ```
 
-Renders two people side by side. The **higher-strength one is the winner and goes on
+Renders two fighters side by side. The **higher-strength one is the winner and goes on
 the left**, marked with a 👑; the other is on the right. Separate the two names with a
 standalone `v`, `vs`, or `versus`. If a name has never been searched on the site it
 shows the silhouette and a "not found" note (and loses).
