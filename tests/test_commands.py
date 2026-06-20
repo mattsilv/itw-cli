@@ -177,6 +177,65 @@ def test_lookup_uses_silhouette_when_no_real_avatar(monkeypatch):
     assert "▄" in cap.get()  # an avatar (the silhouette) was rendered
 
 
+# --- cmd_versus ------------------------------------------------------------
+def _versus_payload(name, strong):
+    """A result payload for `name` whose strength is high (strong=True) or low."""
+    score = 100 if strong else 20
+    conf = 90 if strong else 10
+    models = [{"id": "openai/gpt-5.5", "label": "GPT-5.5"}]
+    ref = {
+        "canonicalName": name,
+        "canonicalDescriptor": "desc",
+        "cells": {"openai/gpt-5.5": {"status": "ok", "recognitionScore": score,
+                                     "confidence": conf}},
+        "weightRank": {"rank": 1, "total": 100},
+    }
+    return {"query": name.lower(), "models": models, "referents": [ref]}
+
+
+def test_versus_winner_on_left(monkeypatch):
+    monkeypatch.setattr(commands, "local_avatar", lambda slug: _png())
+    monkeypatch.setattr(commands, "avatar_exists", lambda url: False)
+
+    # case 1: A stronger -> A on the left (payload keyed by slug in the path)
+    monkeypatch.setattr(commands, "get",
+                        lambda path: _versus_payload("Alpha", True) if "alpha" in path
+                        else _versus_payload("Bravo", False))
+    with console.capture() as cap:
+        commands.cmd_versus("Alpha", "Bravo")
+    out = cap.get()
+    assert "WINNER" in out
+    assert out.index("ALPHA") < out.index("BRAVO")
+
+    # case 2: B stronger -> B on the left
+    monkeypatch.setattr(commands, "get",
+                        lambda path: _versus_payload("Alpha", False) if "alpha" in path
+                        else _versus_payload("Bravo", True))
+    with console.capture() as cap:
+        commands.cmd_versus("Alpha", "Bravo")
+    out = cap.get()
+    assert "WINNER" in out
+    assert out.index("BRAVO") < out.index("ALPHA")
+
+
+def test_versus_graceful_when_both_missing(monkeypatch):
+    monkeypatch.setattr(commands, "get", lambda path: None)
+    monkeypatch.setattr(commands, "local_avatar", lambda slug: _png())
+    monkeypatch.setattr(commands, "avatar_exists", lambda url: False)
+    with console.capture() as cap:
+        commands.cmd_versus("nobody one", "nobody two")
+    assert "neither name has been searched on the site yet" in cap.get()
+
+
+def test_versus_cli_parsing(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(commands, "cmd_versus",
+                        lambda a, b: captured.update(a=a, b=b))
+    from itwlib.cli import main
+    assert main(["sam", "altman", "v", "hans", "moleman"]) == 0
+    assert (captured["a"], captured["b"]) == ("sam altman", "hans moleman")
+
+
 # --- cmd_board -------------------------------------------------------------
 def test_cmd_board_orders_by_weight_with_medals(monkeypatch):
     rows = [
