@@ -333,22 +333,24 @@ def _fighter(name: str) -> dict:
 def _fighter_cell(f: dict, winner: bool):
     """One fighter column for the versus panel: crown, avatar, name, strength."""
     fg, accent = cardlib.FG, cardlib.ACCENT
-    blocks: list = [Text("👑 WINNER" if winner else "runner-up",
-                         style=(f"bold {accent}" if winner else "dim"))]
+    # each text block is centered on the avatar's width (Align.center per block) so the
+    # header sits under the avatar's center — a plain Group would left-align them.
+    blocks: list = [Align.center(Text("👑 WINNER" if winner else "runner-up",
+                                      style=(f"bold {accent}" if winner else "dim")))]
     if f["img"]:
         try:
-            blocks.append(render_avatar(f["img"], cols=22))
+            blocks.append(Align.center(render_avatar(f["img"], cols=22)))
         except Exception:  # noqa: BLE001
             pass
-    blocks.append(Text(f["name"].upper(), style=f"bold {fg}"))
+    blocks.append(Align.center(Text(f["name"].upper(), style=f"bold {fg}")))
     if f["descriptor"]:
         # clip to one line so both fighters' STRENGTH rows stay aligned
         d = f["descriptor"]
         d = (d[:21] + "…") if len(d) > 22 else d
-        blocks.append(Text(d, style=f"dim {fg}", no_wrap=True))
-    blocks.append(Text(f"{f['strength']} STRENGTH", style=f"bold {accent}"))
+        blocks.append(Align.center(Text(d, style=f"dim {fg}", no_wrap=True)))
+    blocks.append(Align.center(Text(f"{f['strength']} STRENGTH", style=f"bold {accent}")))
     if not f["found"]:
-        blocks.append(Text("not found", style="dim"))
+        blocks.append(Align.center(Text("not found", style="dim")))
     return Align.center(Group(*blocks))
 
 
