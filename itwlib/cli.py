@@ -19,6 +19,7 @@ USAGE = Panel(
     "[bold bright_magenta]itw[/] — intheweights.com CLI\n\n"
     "[cyan]itw [bold]\"<name>\"[/bold][/]            ⭐ profile card — avatar + strength + model bars\n"
     "[cyan]itw [bold]\"<name>\"[/bold] --detail[/]   per-model evidence & tiers\n"
+    "[cyan]itw [bold]<a> v <b>[/bold][/]        head-to-head (winner left)\n"
     "[cyan]itw top[/]                  the top 20 as a pixel-avatar gallery\n"
     "[cyan]itw board[/] [dim][slice][/]        leaderboard table\n\n"
     "[dim]flags:[/] [cyan]--detail[/] · [cyan]--version[/] · [cyan]-h/--help[/]\n"
@@ -50,6 +51,18 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "board":
         commands.cmd_board(args[1] if len(args) > 1 else "top")
         return 0
+
+    # head-to-head: `itw <a> v <b>` — split the name tokens on the first standalone
+    # `v`/`vs`/`versus` separator (case-insensitive); winner is rendered on the left.
+    seps = {"v", "vs", "versus"}
+    for i, tok in enumerate(args):
+        if tok.lower() in seps:
+            left = " ".join(args[:i]).strip()
+            right = " ".join(args[i + 1:]).strip()
+            if left and right:
+                commands.cmd_versus(left, right)
+                return 0
+            break
 
     # everything else is a name lookup (quotes optional: `itw paul mccartney`)
     name = " ".join(args).strip()

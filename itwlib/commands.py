@@ -295,6 +295,93 @@ def _gallery_tile(name: str, rank, cols: int = 18):
     return Group(art, label)
 
 
+# --------------------------------------------------------------------------
+# versus — head-to-head, winner on the left
+# --------------------------------------------------------------------------
+def _fighter(name: str) -> dict:
+    """Resolve one side of a versus matchup: fetch the result (if any), compute
+    strength, and pick the best available avatar (ours > hosted > silhouette)."""
+    slug = slugify(name)
+    data = get(f"/api/result/{urllib.parse.quote(slug)}")
+    found = bool(data)
+    if found:
+        ref = (data.get("referents") or [{}])[0]
+        models = data.get("models") or []
+        cname = ref.get("canonicalName") or name
+        descriptor = ref.get("canonicalDescriptor") or ""
+        strength = cardlib.strength(ref, models)
+    else:
+        cname = name
+        descriptor = ""
+        strength = 0
+
+    img = local_avatar(_avatar_slug(name))
+    if img is None:
+        av = avatar_url(slug)
+        if avatar_exists(av):
+            img = fetch_bytes(av, slug=slug)
+    if img is None:
+        img = local_avatar("_placeholder")
+
+    return {"name": cname, "descriptor": descriptor, "strength": strength,
+            "img": img, "found": found}
+
+
+def _fighter_cell(f: dict, winner: bool):
+    """One fighter column for the versus panel: crown/dash, avatar, name, strength."""
+    fg, accent = cardlib.FG, cardlib.ACCENT
+    blocks: list = []
+    if winner:
+        blocks.append(Text("👑 WINNER", style=f"bold {accent}"))
+    else:
+        blocks.append(Text("—", style="dim"))
+
+    if f["img"]:
+        try:
+            blocks.append(render_avatar(f["img"], cols=26))
+        except Exception:  # noqa: BLE001
+            pass
+
+    blocks.append(Text(f["name"].upper(), style=f"bold {fg}"))
+    if f["descriptor"]:
+        blocks.append(Text(f["descriptor"], style=f"dim {fg}"))
+    blocks.append(Text(f"{f['strength']} STRENGTH", style=f"bold {accent}"))
+    if not f["found"]:
+        blocks.append(Text("not found", style="dim"))
+    return Align.center(Group(*blocks))
+
+
+def cmd_versus(name_a: str, name_b: str):
+    """Head-to-head: render two people side by side, the higher-strength one on the
+    LEFT with a crown. A TIE keeps A on the left."""
+    a = _fighter(name_a)
+    b = _fighter(name_b)
+
+    if not a["found"] and not b["found"]:
+        console.print("[yellow]neither name has been searched on the site yet[/]")
+        return
+
+    # winner on the left; tie keeps A on the left
+    left, right = (a, b) if a["strength"] >= b["strength"] else (b, a)
+
+    vs = Text("\n\n\nVS", style="bold dim", justify="center")
+
+    grid = Table.grid(padding=(0, 2))
+    grid.add_column(justify="center")
+    grid.add_column(justify="center")
+    grid.add_column(justify="center")
+    grid.add_row(
+        _fighter_cell(left, winner=True),
+        Align.center(vs),
+        _fighter_cell(right, winner=False),
+    )
+
+    console.print(Panel(
+        grid, box=box.ROUNDED, border_style=cardlib.ACCENT,
+        style=f"on {cardlib.BG}", padding=(1, 3),
+    ))
+
+
 def cmd_top(per_row: int = 4):
     """Render the leaderboard's top names as a tiled pixel-avatar gallery."""
     rows = get("/api/leaderboard?slice=top")
