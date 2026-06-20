@@ -1,6 +1,6 @@
 [project]
 name = "itw-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "A polished open-source terminal client for intheweights.com — leaderboard, per-model recognition, and a terminal share card with the hosted pixel avatar embedded."
 readme = "README.md"
 requires-python = ">=3.10"
